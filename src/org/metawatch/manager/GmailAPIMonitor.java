@@ -155,7 +155,7 @@ public class GmailAPIMonitor implements GmailMonitor {
 			if (Preferences.logging) Log.d("ow", "onChange observer - unread");
 
 			int currentUnreadCount = getUnreadCount();
-
+			
 			//if (Preferences.logging) Log.d("ow", "current gmail unread count: " + Integer.toString(currentGmailUnreadCount));
 
 			if (Preferences.notifyGmail && currentUnreadCount > lastUnreadCount)

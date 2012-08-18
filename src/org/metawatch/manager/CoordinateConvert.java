@@ -35,12 +35,11 @@ public class CoordinateConvert {
 		  char c2 = (char) ('A' + l2);
 	
 		  // strip 100km-grid indices from easting & northing, and reduce precision
-		  double e = Math.floor((easting%100000)/Math.pow(10,5-digits/2));
-		  double n = Math.floor((northing%100000)/Math.pow(10,5-digits/2));
+		  int e = (int) Math.floor((easting%100000)/Math.pow(10,5-digits/2));
+		  int n = (int) Math.floor((northing%100000)/Math.pow(10,5-digits/2));
 		  int d = digits / 2;
 	
-		  return String.format("%c%c %0*d %0*d", c1, c2, d, e, d, n);
-
+		  return String.format("%c%c %0"+d+"d %0"+d+"d", c1, c2, e, n);
 		}
 	}
 	

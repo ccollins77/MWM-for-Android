@@ -20,6 +20,7 @@ public class AppManager {
 		if(apps.size()==0) {
 			addApp(new MediaPlayerApp());
 			addApp(new ActionsApp());
+			addApp(new GpsApp());
 		}
 	}
 	

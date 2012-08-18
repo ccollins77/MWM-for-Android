@@ -1,6 +1,9 @@
 package org.metawatch.manager.apps;
 
 import org.metawatch.manager.Application;
+import org.metawatch.manager.CoordinateConvert;
+import org.metawatch.manager.CoordinateConvert.LatLongRef;
+import org.metawatch.manager.CoordinateConvert.OsGridRef;
 import org.metawatch.manager.FontCache;
 import org.metawatch.manager.Idle;
 
@@ -76,12 +79,16 @@ public class GpsApp extends ApplicationBase implements LocationListener {
 		paintSmall.setTextSize(FontCache.instance(context).Small.size);
 		paintSmall.setTypeface(FontCache.instance(context).Small.face);
 		
-		if(location != null) {
-			StaticLayout latlong = new StaticLayout(String.format("%s\n%s\n%s",
-					location.getLatitude(), location.getLongitude(), gpsEnabled ? "Enabled" : "Disabled"),
-					paintSmall, 96, Alignment.ALIGN_NORMAL, 1, 0, false);
-			latlong.draw(canvas);
-		}
+		double lat = location == null ? 0 : location.getLatitude();
+		double lng = location == null ? 0 : location.getLongitude();
+		
+		OsGridRef gridRef = CoordinateConvert.latLongToOs(new LatLongRef(lat, lng));
+		
+		StaticLayout latlong = new StaticLayout(String.format("%f\n%f\n%s\n%s",
+				lat, lng, gpsEnabled ? "Enabled" : "Disabled",
+						gridRef.toString()),
+				paintSmall, 96, Alignment.ALIGN_NORMAL, 1, 0, false);
+		latlong.draw(canvas);
 		
 		return bitmap;
 	}
