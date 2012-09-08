@@ -41,6 +41,36 @@ public class CoordinateConvert {
 	
 		  return String.format("%c%c %0"+d+"d %0"+d+"d", c1, c2, e, n);
 		}
+		
+		public String getLetters() {
+		  // get the 100km-grid indices
+		  int e100k = (int) Math.floor(easting/100000), n100k = (int) Math.floor(northing/100000);
+		  
+		  if (e100k<0 || e100k>6 || n100k<0 || n100k>12) return "";
+		  // translate those into numeric equivalents of the grid letters
+		  int l1 = (int) ((19-n100k) - (19-n100k)%5 + Math.floor((e100k+10)/5));
+		  int l2 = (19-n100k)*5%25 + e100k%5;
+	
+		  // compensate for skipped 'I' and build grid letter-pairs
+		  if (l1 > 7) l1++;
+		  if (l2 > 7) l2++;
+		  char c1 = (char) ('A' + l1);
+		  char c2 = (char) ('A' + l2);
+		  return String.format("%c%c", c1, c2);
+		}
+		
+		public String getNumbers(int digits) {
+		  // strip 100km-grid indices from easting & northing, and reduce precision
+		  int e = (int) Math.floor((easting%100000)/Math.pow(10,5-digits/2));
+		  int n = (int) Math.floor((northing%100000)/Math.pow(10,5-digits/2));
+		  int d = digits / 2;
+		  
+		  int e100k = (int) Math.floor(easting/100000), n100k = (int) Math.floor(northing/100000);
+		  
+		  if (e100k<0 || e100k>6 || n100k<0 || n100k>12) return "";
+	
+		  return String.format("%0"+d+"d %0"+d+"d", e, n);
+		}
 	}
 	
 	public static class LatLongRef {
