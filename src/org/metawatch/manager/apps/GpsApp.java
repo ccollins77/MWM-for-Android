@@ -2,6 +2,8 @@ package org.metawatch.manager.apps;
 
 import org.metawatch.manager.Application;
 import org.metawatch.manager.CoordinateConvert;
+import org.metawatch.manager.MetaWatchService;
+import org.metawatch.manager.Monitors;
 import org.metawatch.manager.CoordinateConvert.LatLongRef;
 import org.metawatch.manager.CoordinateConvert.OsGridRef;
 import org.metawatch.manager.FontCache;
@@ -57,15 +59,24 @@ public class GpsApp extends ApplicationBase implements LocationListener {
 		Criteria c = new Criteria();
 		c.setAccuracy(Criteria.ACCURACY_FINE);
 		c.setSpeedRequired(true);
-		String name = locationManager.getBestProvider(c, true);
-
-		locationManager.requestLocationUpdates(name, 5000, 10, this);
+		final String name = locationManager.getBestProvider(c, true);
+		
+		MetaWatchService.getUiThreadHandler().post(new Runnable() {
+			public void run() {
+				locationManager.requestLocationUpdates(name, 5000, 10, GpsApp.this);
+			}
+		});
 	}
 
 	@Override
 	public void deactivate(Context context, int watchType) {
 		this.context = null;
-		locationManager.removeUpdates(this);
+		
+		MetaWatchService.getUiThreadHandler().post(new Runnable() {
+			public void run() {
+				locationManager.removeUpdates(GpsApp.this);
+			}
+		});
 	}
 
 	@Override

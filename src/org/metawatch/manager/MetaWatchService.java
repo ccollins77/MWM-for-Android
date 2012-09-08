@@ -504,6 +504,8 @@ public class MetaWatchService extends Service {
 		
 		PreferenceManager.getDefaultSharedPreferences(context).registerOnSharedPreferenceChangeListener(prefChangeListener);
 		
+		uiThreadHandler = new Handler();
+		
 		createNotification();
 
 		connectionState = ConnectionState.CONNECTING;
@@ -549,6 +551,8 @@ public class MetaWatchService extends Service {
 				"MetaWatchService.onDestroy()");
 
 		PreferenceManager.getDefaultSharedPreferences(context).unregisterOnSharedPreferenceChangeListener(prefChangeListener);
+		
+		uiThreadHandler = null;
 		
 		Monitors.stop(this);
 		removeNotification();
@@ -1132,5 +1136,13 @@ public class MetaWatchService extends Service {
 		super.onLowMemory();
 	}
 	
+	/**
+	 * Handler for messages to run on the main service thread.
+	 */
+	private static Handler uiThreadHandler;
+	
+	public static Handler getUiThreadHandler() {
+		return uiThreadHandler;
+	}
 
 }
