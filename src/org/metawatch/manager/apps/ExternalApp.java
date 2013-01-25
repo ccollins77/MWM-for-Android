@@ -26,9 +26,6 @@ public class ExternalApp extends ApplicationBase {
 		
 			supportsDigital = true;
 			supportsAnalog = false;
-			
-			pageSettingKey = "idle" + appId;
-			pageSettingAttribute = "idle" + appId;
 		}};
 	}
 	
@@ -54,7 +51,14 @@ public class ExternalApp extends ApplicationBase {
 				for (int type=0; type<4; ++type) {
 					int code = 200 + ((button-1)*4) + type;
 					int actualButton = button;
-					if (actualButton>3) actualButton++;
+					// Gen2 watches have LED on top left rather than bottom left button
+					if (MetaWatchService.watchGen == MetaWatchService.WatchGen.GEN2) {	
+						if (actualButton>3) actualButton++;
+					}
+					else {
+						if (actualButton>4) actualButton++;
+					}
+							
 					Protocol.enableButton(actualButton, type, code, MetaWatchService.WatchBuffers.APPLICATION);
 				}
 			}

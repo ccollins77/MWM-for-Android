@@ -15,9 +15,12 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.metawatch.manager.Idle;
 import org.metawatch.manager.MetaWatch;
+import org.metawatch.manager.MetaWatchService;
 import org.metawatch.manager.MetaWatchService.Preferences;
 import org.metawatch.manager.Monitors.LocationData;
+import org.metawatch.manager.Utils;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -155,11 +158,21 @@ public class YahooWeatherEngine extends AbstractWeatherEngine {
 							+ weatherLocation + arguments;
 				}
 
-				return requestWeatherFromYahooPlacefinder(placeFinderUrl,
+				weatherData = requestWeatherFromYahooPlacefinder(placeFinderUrl,
 						weatherData);
+				
+				weatherData.error = false;
+				weatherData.errorString = "";
+				
+				Idle.updateIdle(context, true);
+				MetaWatchService.notifyClients();
 			}
 
 		} catch (Exception e) {
+			weatherData.errorString = e.getMessage();
+			if( weatherData.errorString != null )
+				weatherData.error = true;
+			
 			if (Preferences.logging)
 				Log.e(MetaWatch.TAG, "Exception while retreiving weather", e);
 		} finally {
@@ -221,9 +234,9 @@ public class YahooWeatherEngine extends AbstractWeatherEngine {
 						+ rp.getStatusLine());
 			}
 		} catch (SAXException e) {
-			throw new IOException(e);
+			throw Utils.createCompatibleIOException(e);
 		} catch (ParserConfigurationException e) {
-			throw new IOException(e);
+			throw Utils.createCompatibleIOException(e);
 		}
 	}
 
@@ -274,7 +287,8 @@ public class YahooWeatherEngine extends AbstractWeatherEngine {
 				weatherData.celsius = Preferences.weatherCelsius;
 				weatherData.condition = handler.getText();
 				weatherData.temp = handler.getTemp();
-				weatherData.forecastTimeStamp = System.currentTimeMillis(); // TODO
+				weatherData.forecastTimeStamp = System.currentTimeMillis();				
+				weatherData.timeStamp = weatherData.forecastTimeStamp;
 				weatherData.icon = getIcon(handler.getCode());
 				List<Forecast> forecasts = handler.getForecasts();
 				weatherData.forecast = new Forecast[forecasts.size()];
@@ -291,9 +305,9 @@ public class YahooWeatherEngine extends AbstractWeatherEngine {
 						+ rp.getStatusLine());
 			}
 		} catch (SAXException e) {
-			throw new IOException(e);
+			throw Utils.createCompatibleIOException(e);
 		} catch (ParserConfigurationException e) {
-			throw new IOException(e);
+			throw Utils.createCompatibleIOException(e);
 		}
 
 	}

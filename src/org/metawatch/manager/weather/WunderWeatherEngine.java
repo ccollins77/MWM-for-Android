@@ -1,9 +1,10 @@
 package org.metawatch.manager.weather;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Date;
+import java.util.Calendar;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -19,6 +20,7 @@ import org.metawatch.manager.MetaWatchService;
 import org.metawatch.manager.MetaWatchService.GeolocationMode;
 import org.metawatch.manager.MetaWatchService.Preferences;
 import org.metawatch.manager.Monitors.LocationData;
+import org.metawatch.manager.Utils;
 
 import android.content.Context;
 import android.util.Log;
@@ -146,9 +148,9 @@ public class WunderWeatherEngine extends AbstractWeatherEngine {
 
 				boolean isDay = true;
 
-				Date dt = new Date();
-				int hours = dt.getHours();
-				int minutes = dt.getMinutes();
+				Calendar cal = Calendar.getInstance();
+				int hours = cal.get(Calendar.HOUR_OF_DAY);
+				int minutes = cal.get(Calendar.MINUTE);
 
 				if ((hours < weatherData.sunriseH)
 						|| (hours == weatherData.sunriseH && minutes < weatherData.sunriseM)
@@ -212,12 +214,19 @@ public class WunderWeatherEngine extends AbstractWeatherEngine {
 				weatherData.received = true;
 				weatherData.timeStamp = System.currentTimeMillis();
 
+				weatherData.error = false;
+				weatherData.errorString = "";
+				
 				Idle.updateIdle(context, true);
 				MetaWatchService.notifyClients();
 
 			}
 
-		} catch (Exception e) {
+		} catch (Exception e) {		
+			weatherData.errorString = e.getMessage();
+			if( weatherData.errorString != null )
+				weatherData.error = true;
+			
 			if (Preferences.logging)
 				Log.e(MetaWatch.TAG, "Exception while retreiving weather", e);
 		} finally {
@@ -229,7 +238,7 @@ public class WunderWeatherEngine extends AbstractWeatherEngine {
 	}
 
 	// http://p-xr.com/android-tutorial-how-to-parse-read-json-data-into-a-android-listview/
-	public static JSONObject getJSONfromURL(String url) {
+	public static JSONObject getJSONfromURL(String url) throws IOException {
 
 		// initialize
 		InputStream is = null;
@@ -247,6 +256,7 @@ public class WunderWeatherEngine extends AbstractWeatherEngine {
 		} catch (Exception e) {
 			if (Preferences.logging)
 				Log.e(MetaWatch.TAG, "Error in http connection " + e.toString());
+			throw Utils.createCompatibleIOException(e);
 		}
 
 		// convert response to string
@@ -290,6 +300,7 @@ public class WunderWeatherEngine extends AbstractWeatherEngine {
 			} catch (JSONException e) {
 				if (Preferences.logging)
 					Log.e(MetaWatch.TAG, "Error parsing data " + e.toString());
+				throw Utils.createCompatibleIOException(e);
 			}
 		}
 		return jArray;

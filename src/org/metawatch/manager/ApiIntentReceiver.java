@@ -32,6 +32,7 @@
 
 package org.metawatch.manager;
 
+import org.metawatch.manager.MetaWatchService.ConnectionState;
 import org.metawatch.manager.MetaWatchService.Preferences;
 import org.metawatch.manager.Notification.VibratePattern;
 import org.metawatch.manager.apps.AppManager;
@@ -42,13 +43,17 @@ import org.metawatch.manager.widgets.WidgetManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 public class ApiIntentReceiver extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
+		
+		MetaWatchService.autoStartService(context);
 		
 		final String action = intent.getAction();
 		if (Preferences.logging) Log.d(MetaWatch.TAG, "ApiIntentReceiver.onReceive(): received intent, action='"+action+"'");
@@ -96,9 +101,18 @@ public class ApiIntentReceiver extends BroadcastReceiver {
 				AppManager.addApp(app);
 			}
 			
-			if (action.equals("org.metawatch.manager.APPLICATION_START")) {
-				int page = Idle.addAppPage(context, app);
-				Idle.toPage(context, page);
+			if (MetaWatchService.connectionState == ConnectionState.CONNECTED) {
+				if (action.equals("org.metawatch.manager.APPLICATION_START")) {
+					int page = Idle.addAppPage(context, app);
+					Idle.toPage(context, page);
+				} else {
+					// Auto open as a page, if it's enabled in preferences
+					final String pageSetting = app.getInfo().getPageSettingName();
+					SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+					if (prefs.getBoolean(pageSetting, false)) {
+						Idle.addAppPage(context, app);
+					}
+				}
 			}
 
 			return;

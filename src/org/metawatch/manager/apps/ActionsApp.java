@@ -6,10 +6,9 @@ import java.util.ListIterator;
 import java.util.Stack;
 
 import org.metawatch.manager.FontCache;
+import org.metawatch.manager.FontCache.FontSize;
 import org.metawatch.manager.Idle;
 import org.metawatch.manager.MetaWatchService;
-import org.metawatch.manager.MetaWatchService.Preferences;
-import org.metawatch.manager.MetaWatchService.QuickButton;
 import org.metawatch.manager.MetaWatchService.WatchType;
 import org.metawatch.manager.Protocol;
 import org.metawatch.manager.Utils;
@@ -40,9 +39,6 @@ public class ActionsApp extends ApplicationBase {
 	
 		supportsDigital = true;
 		supportsAnalog = true;
-		
-		pageSettingKey = "IdleActions";
-		pageSettingAttribute = "idleActions";
 	}};
 	
 	public final static byte ACTION_NEXT = 30;
@@ -56,11 +52,11 @@ public class ActionsApp extends ApplicationBase {
 	
 	public boolean isToggleable() {
 		// Always provide a way to reach the Actions app (since it's quite central).
-		if (MetaWatchService.watchType == MetaWatchService.WatchType.DIGITAL &&
-				Preferences.quickButton == QuickButton.OPEN_ACTIONS) {
-			// Only set toggleable if Quick Button can open it again.
-			return true;
-		}
+		//if (MetaWatchService.watchType == MetaWatchService.WatchType.DIGITAL &&
+		//		Preferences.quickButton == QuickButton.OPEN_ACTIONS) {
+		//	// Only set toggleable if Quick Button can open it again.
+		//	return true;
+		//}
 		
 		return false;
 	}
@@ -145,7 +141,7 @@ public class ActionsApp extends ApplicationBase {
 		init(context);
 
 		currentActions.clear();
-		if (containerStack.isEmpty()) {
+		if (containerStack.isEmpty() || containerStack.peek()==null) {
 			// At the root.
 			currentActions = ActionManager.getRootActions(context);
 		} else {
@@ -203,13 +199,21 @@ public class ActionsApp extends ApplicationBase {
 		Paint paintWhite = new Paint();
 		paintWhite.setColor(Color.WHITE);
 		
+		String headerText = getHeaderText(context);
+		StaticLayout headerLayout = null;
+		int headerHeight = 0;
+		if (headerText != null) {
+			headerLayout = Utils.buildText(context, headerText, 96, Layout.Alignment.ALIGN_NORMAL, Color.BLACK, FontSize.SMALL);			
+			headerHeight = headerLayout.getHeight();
+		}
+		
 		// Double the height to make room for multi line items that trigger scrolling.
 		Bitmap bitmap = Bitmap.createBitmap(96, 192, Bitmap.Config.RGB_565);
 		Canvas canvas = new Canvas(bitmap);
 		canvas.drawColor(Color.WHITE);
 		
-		final int maxY = 96 - textHeight;
-		int y = textHeight + 5; //Make room for a title.
+		final int maxY = 96 - textHeight - headerHeight;
+		int y = textHeight + headerHeight +  5; //Make room for a title.
 
 		boolean scrolled = false;
 		for (int i = Math.max(0, currentSelection - 96/textHeight + 4);
@@ -278,20 +282,31 @@ public class ActionsApp extends ApplicationBase {
 			}
 		}
 		
-		// Draw title.
+		// Draw title and header
 		if (scrolled) {
 			// Paint white over any scrolled items.
-			canvas.drawRect(0, 0, 95, textHeight+4, paintWhite);
+			canvas.drawRect(0, 0, 95, textHeight+4+headerHeight, paintWhite);
 		}
-		String title = (containerStack.isEmpty() ? "Actions" : containerStack.peek().getTitle());
+		String title = getUiTitle();
 		canvas.drawText((String) TextUtils.ellipsize(title, paint, 84, TruncateAt.END), 2, textHeight+1, paint);
-		canvas.drawLine(1, textHeight+2, (isToggleable() ? 79 : 87), textHeight+2, paint);
+		
+		if (headerLayout!=null) {
+			canvas.save();		
+			canvas.translate(0, textHeight+2);
+			headerLayout.draw(canvas);
+			canvas.restore();	
+			
+			canvas.drawLine(1, textHeight+headerHeight+2, 94, textHeight+headerHeight+2, paint);
+		}
+		else {
+			canvas.drawLine(1, textHeight+headerHeight+2, (isToggleable() ? 79 : 87), textHeight+headerHeight+2, paint);			
+		}
 		
 		// Draw icons.
 		drawDigitalAppSwitchIcon(context, canvas, preview);
 		canvas.drawBitmap(Utils.getBitmap(context, "action_down.bmp"), 87, 43, null);
 		
-		final int currentType = currentActions.get(currentSelection).getSecondaryType();
+		final int currentType = currentActions == null || currentActions.size() == 0 ? 0 : currentActions.get(currentSelection).getSecondaryType();
 		//TODO split the secodary icons to separate files and draw them in addition to the right icon.
 		if (currentType == Action.SECONDARY_RESET) {
 			canvas.drawBitmap(Utils.getBitmap(context, "action_reset_right.bmp"), 79, 87, null);
@@ -306,6 +321,14 @@ public class ActionsApp extends ApplicationBase {
 			bitmap = Bitmap.createBitmap(bitmap, 0, 0, 96, 96);
 		}
 		return bitmap;
+	}
+
+	private String getUiTitle() {
+		return (containerStack==null || containerStack.isEmpty() || containerStack.peek()==null) ? "Actions" : containerStack.peek().getTitle();
+	}
+
+	private String getHeaderText(Context context) {
+		return (containerStack==null || containerStack.isEmpty() || containerStack.peek()==null) ? null : containerStack.peek().getHeaderText(context);
 	}
 	
 	private Bitmap drawAnalog(final Context context, boolean preview) {
@@ -327,7 +350,7 @@ public class ActionsApp extends ApplicationBase {
 		// Top screen
 		canvas.clipRect(0, 0, 80, 16, Region.Op.REPLACE);
 		
-		String title = "Actions";
+		String title = getUiTitle();
 		StringBuilder position = new StringBuilder();
 		if (currentActions.size()>0) {
 			position.append("(");
@@ -336,11 +359,7 @@ public class ActionsApp extends ApplicationBase {
 			position.append(currentActions.size());
 			position.append(")");
 		}
-					
-		if (!containerStack.isEmpty()) {
-			title = containerStack.peek().getTitle();
-		}
-		
+			
 		canvas.drawText((String) TextUtils.ellipsize(title, paint, 74, TruncateAt.END), 0, 6, paint);
 		canvas.drawText((String) TextUtils.ellipsize(position.toString(), paint, 74, TruncateAt.END), 0, 13, paint);
 		

@@ -37,36 +37,42 @@ import java.util.List;
 import java.util.Map;
 
 import org.metawatch.manager.MetaWatchService.Preferences;
-import org.metawatch.manager.MetaWatchService.QuickButton;
 import org.metawatch.manager.MetaWatchService.WatchType;
+import org.metawatch.manager.actions.Action;
 import org.metawatch.manager.actions.ActionManager;
-import org.metawatch.manager.apps.ActionsApp;
+import org.metawatch.manager.actions.AppManagerAction;
+import org.metawatch.manager.actions.ContainerAction;
 import org.metawatch.manager.apps.AppManager;
 import org.metawatch.manager.apps.ApplicationBase;
-import org.metawatch.manager.apps.MediaPlayerApp;
+import org.metawatch.manager.apps.ApplicationBase.AppData;
 import org.metawatch.manager.widgets.InternalWidget.WidgetData;
 import org.metawatch.manager.widgets.WidgetManager;
 import org.metawatch.manager.widgets.WidgetRow;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 public class Idle {
 	
+	//final static byte IDLE_DUMMY = 65;
+	
 	final static byte IDLE_NEXT_PAGE = 60;
 	final static byte IDLE_OLED_DISPLAY = 61;
-	final static byte QUICK_BUTTON = 62;
+	final static byte RIGHT_QUICK_BUTTON = 62;
 	final static byte TOGGLE_SILENT = 63;
+	final static byte LEFT_QUICK_BUTTON = 64;
 	
 	private static boolean busy = false;
 	private static Object busyObj = new Object();
 	
-	private static boolean isBusy() {
+	public static boolean isBusy() {
 		if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.isBusy()");
 		synchronized (busyObj) {
 			if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.busy="+busy);
@@ -101,20 +107,20 @@ public class Idle {
 		}
 		
 		public void activate(final Context context, int watchType) {
-			if (Preferences.quickButton != QuickButton.DISABLED) {
+			//if (Preferences.quickButton != QuickButton.DISABLED) {
 				if (watchType == MetaWatchService.WatchType.DIGITAL) {
 					Protocol.disableButton(1, 0, MetaWatchService.WatchBuffers.IDLE); // Disable built in action for Right middle immediate
-					Protocol.enableButton(1, 1, Idle.QUICK_BUTTON, screenMode(watchType)); // Right middle - press
+					Protocol.enableButton(1, 1, Idle.RIGHT_QUICK_BUTTON, screenMode(watchType)); // Right middle - press
 				}
-			}
+			//}
 		}
 
 		public void deactivate(final Context context, int watchType) {
-			if (Preferences.quickButton != QuickButton.DISABLED) {
+			//if (Preferences.quickButton != QuickButton.DISABLED) {
 				if (watchType == MetaWatchService.WatchType.DIGITAL) {
 					Protocol.disableButton(1, 1, screenMode(watchType)); // Right middle - press
 				}
-			}
+			//}
 		}
 		
 		public Bitmap draw(final Context context, boolean preview, Bitmap bitmap, int watchType) {
@@ -146,26 +152,35 @@ public class Idle {
 					totalHeight += row.getHeight();
 				}
 							
-				int space = (watchType == WatchType.DIGITAL) ? (((showClock ? 64:96) - totalHeight) / (rows.size()+1)) : 0;
-				int yPos = (watchType == WatchType.DIGITAL) ? (showClock ? 32:0) + space : 0;
-				
+				float padding = 0;
+				float yPos = 0;
+				if (watchType == WatchType.DIGITAL && Preferences.alignWidgetRowToBottom) {
+					padding = 0;
+					yPos = (96 - totalHeight);
+				} else {
+					padding = (watchType == WatchType.DIGITAL) ? (float)(((showClock ? 64:96) - totalHeight) / (float)(2*rows.size())) : 0;
+					yPos = (watchType == WatchType.DIGITAL) ? (showClock ? 30:0) + padding : 0;
+				}
+				final float space = padding;
+
+				float widgetRowYPos = yPos;
 				for(WidgetRow row : rows) {
-					row.draw(widgetData, canvas, yPos);
-					yPos += row.getHeight() + space;
+					row.draw(widgetData, canvas, (int)widgetRowYPos);
+					widgetRowYPos += row.getHeight() + (space*2);
 				}
 	
+				float separatorYPos = yPos;
 				if (watchType == WatchType.DIGITAL && Preferences.displayWidgetRowSeparator) {
-					yPos = space/2; // Center the separators between rows.
+					separatorYPos -= space/2; // Center the separators between rows.
 					if (showClock) {
-						yPos += 32;
-						drawLine(canvas, yPos);
+						drawLine(canvas, (int)separatorYPos);
 					}
 					int i = 0;
 					for(WidgetRow row : rows) {
 						if (++i == rows.size())
 							continue;
-						yPos += row.getHeight() + space;
-						drawLine(canvas, yPos);
+						separatorYPos += row.getHeight() + (space*2);
+						drawLine(canvas, (int)separatorYPos);
 					}
 				}
 			}
@@ -174,7 +189,10 @@ public class Idle {
 		}
 		
 		public int screenMode(int watchType) {
-			if (Preferences.appBufferForClocklessPages) {
+			// Always use app buffer for clockless pages on gen2 watches
+			// this works around a bug in the fw that stops clockless idle
+			// screens displaying properly
+			if (Preferences.appBufferForClocklessPages || MetaWatchService.watchGen == MetaWatchService.WatchGen.GEN2) {
 				boolean showsClock = (pageIndex==0 || Preferences.clockOnEveryPage);
 				if (watchType == MetaWatchService.WatchType.DIGITAL && !showsClock)
 					return MetaWatchService.WatchBuffers.APPLICATION;
@@ -210,7 +228,7 @@ public class Idle {
 		}
 		
 		public Bitmap draw(final Context context, boolean preview, Bitmap bitmap, int watchType) {
-			return app.update(context, preview, watchType);
+			return app != null ? app.update(context, preview, watchType) : null;
 		}	
 		
 		public int screenMode(int watchType) {
@@ -318,9 +336,8 @@ public class Idle {
 			setBusy(true);
 			
 			if(!initialised) {
+				AppManager.initApps(context);
 				WidgetManager.initWidgets(context, null);
-				AppManager.initApps();
-				AppManager.sendDiscoveryBroadcast(context);
 				ActionManager.initActions(context);
 				initialised = true;
 			}
@@ -375,16 +392,17 @@ public class Idle {
 			}
 			screens.add(new WidgetPage(screenRow, screens.size()));
 			
-			if (prevList == null) {
-				// Initialize app pages.
-				// TODO: Implement a better method of configuring enabled apps
-				if(Preferences.idleActions) {
-					screens.add(new AppPage(AppManager.getApp(ActionsApp.APP_ID)));
-				}
-				if(Preferences.idleMusicControls) {
-					screens.add(new AppPage(AppManager.getApp(MediaPlayerApp.APP_ID)));
-				}
+			if (prevList == null) {			
+				SharedPreferences sharedPreferences = PreferenceManager
+						.getDefaultSharedPreferences(context);
 				
+				AppData[] data = AppManager.getAppInfos();	
+				for (AppData appEntry : data) {
+					if(sharedPreferences.getBoolean(appEntry.getPageSettingName(), false)) {
+						screens.add(new AppPage(AppManager.getApp(appEntry.id)));
+					}
+				}
+								
 			} else {
 				// Copy app pages from previous list.
 				for (IdlePage page : prevList) {
@@ -431,9 +449,9 @@ public class Idle {
 	  Paint paint = new Paint();
 	  paint.setColor(Color.BLACK);
 
-	  int left = 3;
+	  int left = 2;
 
-	  for (int i = 0+left; i < 96-left; i += 3)
+	  for (int i = 0+left; i < 96-left; i += 4)
 	    canvas.drawLine(i, y, i+2, y, paint);
 	
 	  return canvas;
@@ -478,14 +496,19 @@ public class Idle {
 		
 		Protocol.sendLcdBitmap(createIdle(context), mode);
 		if (mode == MetaWatchService.WatchBuffers.IDLE)
-			Protocol.configureIdleBufferSize(showClock);
+			Protocol.configureIdleBufferSize(showClock, true);
+		
+		if (Preferences.logging) Log.d(MetaWatch.TAG, "sendLcdIdle: Drawing idle screen on buffer "+mode);
 		Protocol.updateLcdDisplay(mode);
 		
 		if (Preferences.logging) Log.d(MetaWatch.TAG, "sendLcdIdle end");
 	}
 	
-	public static boolean toIdle(Context context) {
+	public static void toIdle(Context context) {
 		if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.toIdle()");
+		
+		if (Notification.isActive())
+			return;
 		
 		MetaWatchService.WatchModes.IDLE = true;
 		MetaWatchService.watchState = MetaWatchService.WatchStates.IDLE;
@@ -499,11 +522,12 @@ public class Idle {
 		
 		if (MetaWatchService.watchType == MetaWatchService.WatchType.DIGITAL) {
 			sendLcdIdle(context, true);
-				
+							
 			if (numPages()>1) {
-				Protocol.disableButton(0, 0, MetaWatchService.WatchBuffers.IDLE); // Disable built in action for Right top immediate
 				Protocol.enableButton(0, 1, IDLE_NEXT_PAGE, MetaWatchService.WatchBuffers.IDLE); // Right top press
 				Protocol.enableButton(0, 1, IDLE_NEXT_PAGE, MetaWatchService.WatchBuffers.APPLICATION); // Right top press
+				Protocol.enableButton(5, 0, LEFT_QUICK_BUTTON, MetaWatchService.WatchBuffers.IDLE); // left middle - press
+			
 			}
 			
 			Protocol.enableButton(0, 2, TOGGLE_SILENT, MetaWatchService.WatchBuffers.IDLE);
@@ -518,19 +542,36 @@ public class Idle {
 		
 		Protocol.enableButton(1, 2, TOGGLE_SILENT, MetaWatchService.WatchBuffers.IDLE);
 		Protocol.enableButton(1, 3, TOGGLE_SILENT, MetaWatchService.WatchBuffers.IDLE);
-
-		return true;
 	}
 	
-	public static void updateIdle(Context context, boolean refresh) {
-		if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.updateIdle()");
+	public static void updateIdle(final Context context, final boolean refresh) {
 		
-		if (MetaWatchService.watchState == MetaWatchService.WatchStates.IDLE )
-			if (MetaWatchService.watchType == MetaWatchService.WatchType.DIGITAL)
-				sendLcdIdle(context, refresh);
-			else if (MetaWatchService.watchType == MetaWatchService.WatchType.ANALOG)
-				updateOledIdle(context, refresh);
+		if (MetaWatchService.watchType == MetaWatchService.WatchType.UNKNOWN) {
+			if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.updateIdle() skipped - yet unknown watch type");
+			return;
+		}
+		
+		if (MetaWatchService.watchState == MetaWatchService.WatchStates.IDLE ) {
+			Thread thread = new Thread("UpdateIdle") {
+	
+				@Override
+				public void run() {
+					if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.updateIdle()");
+					long timestamp = System.currentTimeMillis();
+					
+					if (MetaWatchService.watchType == MetaWatchService.WatchType.DIGITAL)
+						sendLcdIdle(context, refresh);
+					else if (MetaWatchService.watchType == MetaWatchService.WatchType.ANALOG)
+						updateOledIdle(context, refresh);
+					
+					if (Preferences.logging) Log.d(MetaWatch.TAG, "updateIdle took " + (System.currentTimeMillis()-timestamp) + " ms" );
+				}
+			};
+			thread.start();
+		}
+		
 	}
+		
 	
 	private static void updateOledIdle(Context context, boolean refresh) {	
 		if (isBusy())
@@ -570,14 +611,28 @@ public class Idle {
 		return ApplicationBase.BUTTON_NOT_USED;
 	}
 	
-	public static void quickButtonAction(Context context) {
-		switch(Preferences.quickButton) {
-		case QuickButton.NOTIFICATION_REPLAY:
-			Notification.replay(context);
-			break;
-		case QuickButton.OPEN_ACTIONS:
-			AppManager.getApp(ActionsApp.APP_ID).open(context, false);
-			break;
+	public static void quickButtonAction(Context context, String actionId) {
+		
+		if(actionId.startsWith(AppManagerAction.appManagerPrefix)) {
+			String appId = actionId.replace(AppManagerAction.appManagerPrefix, "");
+			if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.quickButtonAction() app: "+appId);
+			AppManager.getApp(appId).open(context, true);
+		}
+		else {
+			Action action = ActionManager.getAction(actionId);
+			if(action!=null) {
+				if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.quickButtonAction() "+action.getName());
+				
+				if(action instanceof ContainerAction) {
+					ActionManager.displayAction(context, (ContainerAction)action);
+				}
+				else {
+					action.performAction(context);
+				}
+			}
+			else {
+				if (Preferences.logging) Log.d(MetaWatch.TAG, "Idle.quickButtonAction() couldn't find action "+actionId);
+			}
 		}
 	}
 

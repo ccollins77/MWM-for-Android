@@ -55,7 +55,10 @@ public class WidgetManager {
 			widgets.add(new PictureWidget());
 			widgets.add(new TouchDownWidget());
 			widgets.add(new VoicemailWidget());
-			//widgets.add(new TestWidget());
+			widgets.add(new NowPlayingWidget());
+			if (Preferences.showTestWidgets) {
+				widgets.add(new TestWidget());
+			}
 		}
 		
 		for(InternalWidget widget : widgets) {

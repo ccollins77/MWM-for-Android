@@ -18,6 +18,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.text.Layout;
+import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextUtils.TruncateAt;
@@ -55,6 +56,9 @@ public class WeatherWidget implements InternalWidget {
 	
 	public final static String id_10 = "weather_24_16";
 	final static String desc_10 = "Current Weather (24x16)";
+	
+	public final static String id_11 = "weather_46_46";
+	final static String desc_11 = "Current Weather (46x46)";
 	
 	private Context context = null;
 	private TextPaint paintSmall;
@@ -264,6 +268,20 @@ public class WeatherWidget implements InternalWidget {
 			
 			result.put(widget.id, widget);
 		}
+		
+		if(widgetIds == null || widgetIds.contains(id_11)) {
+			InternalWidget.WidgetData widget = new InternalWidget.WidgetData();
+			
+			widget.id = id_11;
+			widget.description = desc_11;
+			widget.width = 46;
+			widget.height = 46;
+			
+			widget.bitmap = draw11();
+			widget.priority = calcPriority();
+			
+			result.put(widget.id, widget);
+		}
 	}
 	
 	private int calcPriority()
@@ -386,13 +404,21 @@ public class WeatherWidget implements InternalWidget {
 		paintSmall.setTextAlign(Align.LEFT);
 		paintSmallOutline.setTextAlign(Align.LEFT);
 		
-		if (Monitors.weatherData.received && Monitors.weatherData.forecast!=null && Monitors.weatherData.forecast.length>3) {
+		if (Monitors.weatherData.received && Monitors.weatherData.forecast!=null && Monitors.weatherData.forecast.length>1) {
 			int weatherIndex = 0;
 			if(Monitors.weatherData.forecast.length>4)
 				weatherIndex = 1; // Start with tomorrow's weather if we've got enough entries
 
-			for (int i=0;i<4;++i) {
+			int max = Math.min(4, Monitors.weatherData.forecast.length);
+			
+			for (int i=0;i<max;++i) {
 				int x = i*24;
+				
+				if (max==2)
+					x += (i+1) * 16;
+				else if (max==3)
+					x += (i+1) * 12;
+				
 				Bitmap image = Utils.getBitmap(context, Monitors.weatherData.forecast[weatherIndex].getIcon());
 				canvas.drawBitmap(image, x, 4, null);
 				Utils.drawOutlinedText(Monitors.weatherData.forecast[weatherIndex].getDay(), canvas, x, 6, paintSmall, paintSmallOutline);
@@ -436,10 +462,11 @@ public class WeatherWidget implements InternalWidget {
 			int moonPhase = Monitors.weatherData.ageOfMoon;
 			int moonImage = phaseImage[moonPhase];
 			int x = 0-(moonImage*24);
+			int y = (Preferences.displayWidgetIconOnTop) ? 0 : 8;
 			Bitmap image = shouldInvert ? Utils.getBitmap(context, "moon-inv.bmp") : Utils.getBitmap(context, "moon.bmp");
-			canvas.drawBitmap(image, x, 0, null);
+			canvas.drawBitmap(image, x, y, null);
 			
-			canvas.drawText(Integer.toString(Monitors.weatherData.moonPercentIlluminated)+"%", 12, 30, paintSmall);
+			canvas.drawText(Integer.toString(Monitors.weatherData.moonPercentIlluminated)+"%", 12, (Preferences.displayWidgetIconOnTop) ? 30 : 6, paintSmall);
 		} else {
 			canvas.drawText("Wait", 12, 16, paintSmall);
 		}
@@ -542,13 +569,17 @@ public class WeatherWidget implements InternalWidget {
 		paintSmall.setTextAlign(Align.LEFT);
 		paintSmallOutline.setTextAlign(Align.LEFT);
 		
-		if (Monitors.weatherData.received && Monitors.weatherData.forecast!=null && Monitors.weatherData.forecast.length>3) {
+		if (Monitors.weatherData.received && Monitors.weatherData.forecast!=null && Monitors.weatherData.forecast.length>1) {
 			int weatherIndex = 0;
 			if(Monitors.weatherData.forecast.length>3)
 				weatherIndex = 1; // Start with tomorrow's weather if we've got enough entries
 
-			for (int i=0;i<3;++i) {
+			final int max = Math.min(3, Monitors.weatherData.forecast.length);
+						
+			for (int i=0;i<max;++i) {
 				int x = i*26;
+				if( max==2 )
+					x+=(i+1)*8;
 				final String smallIcon = Monitors.weatherData.forecast[weatherIndex].getIcon().replace(".bmp", "_12.bmp");
 				Bitmap image = Utils.getBitmap(context, smallIcon);
 				canvas.drawBitmap(image, x+12, 0, null);
@@ -710,6 +741,73 @@ public class WeatherWidget implements InternalWidget {
 
 			canvas.drawText("Wait", 12, 8, paintSmall);
 
+			paintSmall.setTextAlign(Paint.Align.LEFT);
+		}
+		
+		return bitmap;
+	}
+	
+	private Bitmap draw11() {
+		Bitmap bitmap = Bitmap.createBitmap(46, 46, Bitmap.Config.RGB_565);
+		Canvas canvas = new Canvas(bitmap);
+		canvas.drawColor(Color.WHITE);
+		
+		if (Monitors.weatherData.received) {
+			
+			// icon
+			Bitmap image = Utils.getBitmap(context, Monitors.weatherData.icon);
+			
+			canvas.drawBitmap(image, 0, 7, null);
+			
+			// temperatures
+			paintLarge.setTextAlign(Paint.Align.RIGHT);
+			paintLargeOutline.setTextAlign(Paint.Align.RIGHT);
+			Utils.drawOutlinedText(Monitors.weatherData.temp, canvas, 43, 11, paintLarge, paintLargeOutline);
+			if (Monitors.weatherData.celsius) {
+				canvas.drawText("C", 43, 5, paintSmall);
+			}
+			else {
+				canvas.drawText("F", 43, 5, paintSmall);
+			}
+			paintLarge.setTextAlign(Paint.Align.LEFT);
+						
+			if (Monitors.weatherData.forecast!=null && Monitors.weatherData.forecast.length>0) {				
+				paintSmall.setTextAlign(Paint.Align.RIGHT);
+				canvas.drawText(Monitors.weatherData.forecast[0].getTempHigh(), 47, 19, paintSmall);
+				canvas.drawText(Monitors.weatherData.forecast[0].getTempLow(), 47, 27, paintSmall);
+				paintSmall.setTextAlign(Paint.Align.LEFT);
+			}
+
+			StringBuilder sb = new StringBuilder();
+			sb.append(Monitors.weatherData.locationName);
+			sb.append(" ");
+			sb.append(Monitors.weatherData.condition);
+			
+			canvas.save();
+			StaticLayout layout = new StaticLayout(sb.toString(), paintSmall, 46, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0, false);
+			
+			int h = layout.getHeight();
+			if( h>17 )
+				h=17;
+			
+			canvas.translate(0, 46-h); //position the text
+			layout.draw(canvas);
+			canvas.restore();	
+						
+		} else {
+			paintSmall.setTextAlign(Paint.Align.CENTER);
+			if (Preferences.weatherGeolocationMode != GeolocationMode.MANUAL) {
+				canvas.drawText("Awaiting", 23, 22, paintSmall);
+				if( !LocationData.received ) {
+					canvas.drawText("location", 23, 28, paintSmall);
+				}
+				else {
+					canvas.drawText("weather", 23, 28, paintSmall);
+				}
+			}
+			else {
+				canvas.drawText("No data", 23, 25, paintSmall);
+			}
 			paintSmall.setTextAlign(Paint.Align.LEFT);
 		}
 		

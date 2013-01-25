@@ -311,16 +311,27 @@
 	<PreferenceScreen
 		android:title="@string/settings_Digital"
 		>
- 		
+
 		<ListPreference 
 			android:entries="@array/settings_quick_button_name" 
 			android:entryValues="@array/settings_quick_button_value" 
-			android:dialogTitle="@string/settings_quick_button_action" 
-			android:key="QuickButton" 
-			android:title="@string/settings_quick_button_action"
-			android:summary="@string/settings_quick_button_action_desc"
+			android:dialogTitle="@string/settings_left_quick_button_action" 
+			android:key="QuickButtonL" 
+			android:title="@string/settings_left_quick_button_action"
+			android:summary="@string/settings_left_quick_button_action_desc"
 			android:negativeButtonText="@string/settings_CancelButton"
- 			android:defaultValue="0"
+ 			android:defaultValue=":launch:org.metawatch.manager.apps.MediaPlayerApp"
+ 			/>	    
+	    		
+		<ListPreference 
+			android:entries="@array/settings_quick_button_name" 
+			android:entryValues="@array/settings_quick_button_value" 
+			android:dialogTitle="@string/settings_right_quick_button_action" 
+			android:key="QuickButtonR" 
+			android:title="@string/settings_right_quick_button_action"
+			android:summary="@string/settings_right_quick_button_action_desc"
+			android:negativeButtonText="@string/settings_CancelButton"
+ 			android:defaultValue="lastNotification"
  			/>
 		
 		<CheckBoxPreference
@@ -352,7 +363,14 @@
 			android:defaultValue="false"
 			/>
 
-		<CheckBoxPreference
+	    <CheckBoxPreference
+			android:title="@string/settings_Align_widget_row_to_bottom"
+			android:key="AlignWidgetRowToBottom"
+			android:summary="@string/settings_Align_widget_row_to_bottom_desc"
+			android:defaultValue="false"
+			/>
+
+	    <CheckBoxPreference
 			android:title="@string/settings_clock_every_page"
 			android:key="ClockOnEveryPage"
 			android:summary="@string/settings_clock_every_page_desc"
@@ -367,9 +385,29 @@
 			android:defaultValue="true"
 			android:dependency="ClockOnEveryPage"
 			/>
+		
+		<CheckBoxPreference
+		    android:title="@string/settings_apps_show_clock"
+		    android:key="ClockOnAppBuffers"
+		    android:summary="@string/settings_apps_show_clock_desc"
+		    android:defaultValue="false"
+		    />
 
 	</PreferenceScreen>	
+
+	<PreferenceScreen
+	    android:title="@string/settings_calendar_screen"
+	    >
+	    
+		<org.metawatch.manager.ListPreferenceMultiSelect android:defaultValue="#ALL#"
+		    android:key="DisplayCalendars"
+		    android:title="@string/settings_calendars_to_show" android:dialogTitle="@string/settings_calendars_to_show"
+		    android:summary="@string/settings_calendars_to_show_desc"
+		    android:entries="@array/settings_calendar_names"
+		    android:entryValues="@array/settings_calendar_values"/>
 	
+	</PreferenceScreen>
+		
 	<PreferenceScreen
 	    android:title="@string/settings_watch_widgets"
 	    >
@@ -387,7 +425,21 @@
 	        android:defaultValue="false"
 			/>
 		
-		<PreferenceScreen
+	    <CheckBoxPreference
+	        android:title="@string/settings_hidden_widgets_reserve_space"
+	        android:key="HiddenWidgetsReserveSpace"
+	        android:summary="@string/settings_hidden_widgets_reserve_space_desc"
+	        android:defaultValue="false"
+			/>
+		
+	    <CheckBoxPreference
+			android:title="@string/settings_Display_widget_icon_on_top"
+			android:key="DisplayWidgetIconOnTop"
+			android:summary="@string/settings_Display_widget_icon_on_top_desc"
+			android:defaultValue="true"
+			/>
+	    
+	    <PreferenceScreen
 		    android:title="@string/settings_weather_widgets"
 		    >
 	
@@ -399,7 +451,7 @@
 				android:title="@string/settings_weather_provider" 
 				android:negativeButtonText="@string/settings_CancelButton" 
 	 			android:enabled="true" 
-	 			android:defaultValue="1"
+	 			android:defaultValue="3"
 	 			android:summary="@string/settings_weather_provider_desc"
 	 			/>	
 	 		<ListPreference
@@ -443,6 +495,15 @@
 		<PreferenceScreen
 		    android:title="@string/settings_calendar_widgets"
 		    >	    
+		    
+		    <EditTextPreference
+				android:title="@string/settings_calendar_lookahead" android:dialogTitle="@string/settings_calendar_lookahead"
+				android:key="CalendarLookahead"
+				android:summary="@string/settings_calendar_lookahead_desc"
+				android:inputType="number"
+				android:defaultValue="24"
+				/>
+			    
 			<CheckBoxPreference
 				android:title="@string/settings_Read_calendar_during_meeting"
 				android:key="ReadCalendarDuringMeeting"
@@ -474,6 +535,7 @@
 	
 	<PreferenceScreen
 	    android:title="@string/settings_watch_apps"
+	    android:key="WatchAppsScreen"
 	    >
 	    
 	    <ListPreference 
@@ -487,12 +549,6 @@
  			android:defaultValue="0"
  			/>
 
-		<CheckBoxPreference
-			android:title="@string/settings_music_app"
-			android:key="IdleMusicControls"
-			android:summary="@string/settings_music_app_desc"
-			android:defaultValue="false"
-			/>
 		<ListPreference 
 			android:entries="@array/settings_media_control_method_names" 
 			android:entryValues="@array/settings_media_control_method_values" 
@@ -503,14 +559,24 @@
  			android:enabled="true" 
  			android:defaultValue="0"
  			/>	
+		
 		<CheckBoxPreference
-		    android:title="@string/settings_actions_app"
-		    android:key="IdleActions"
-		    android:summary="@string/settings_actions_app_desc"
-		    android:defaultValue="false"
-		    />
+			android:title="@string/settings_Inverse_Media_Player_Buttons"
+			android:key="InverseMediaPlayerButtons"
+			android:summary="@string/settings_Inverse_Media_Player_Buttons_desc"
+			android:defaultValue="false"
+			/>
+		
+		<PreferenceCategory
+		    android:title="@string/settings_active_apps"
+		    android:key="ActiveApps">
+		
+		    <!-- This category gets filled by code in Settings.java -->
+		    
+		</PreferenceCategory>
 	    			    
 	</PreferenceScreen>
+
 	
 	<Preference
 		android:title="@string/settings_choose_theme"
@@ -628,6 +694,13 @@
 			android:summary="@string/settings_screenshots_desc"
 			android:defaultValue="false"
 		    />			
+		    
+		<CheckBoxPreference
+		    android:title="@string/settings_test_widgets"
+		    android:key="TestWidgets"
+		    android:summary="@string/settings_test_widgets_desc"
+		    android:defaultValue="false"
+		    />
 	</PreferenceScreen>	
 	
 	<PreferenceScreen
@@ -645,7 +718,16 @@
 			android:summary="@string/settings_backup_restore_desc"
 			/>
 	</PreferenceScreen>
+	
+	<Preference
+		android:title="@string/settings_about"
+		android:key="About"
+		/>
 
+	<Preference
+		android:title="@string/settings_exit"
+		android:key="Exit"
+		/>
 	
 </PreferenceScreen>
 

@@ -16,8 +16,6 @@ import android.app.ListActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -107,8 +105,13 @@ public class WidgetPicker extends ListActivity {
 
             // Bind the data efficiently with the holder.
             holder.text.setText(mWidgets.get(position).description);
-            if(mWidgets.get(position).bitmap!=null)
-            	holder.icon.setImageBitmap(mWidgets.get(position).bitmap);
+            if(mWidgets.get(position).bitmap!=null) {
+            	Bitmap bmp = mWidgets.get(position).bitmap;
+            	holder.icon.setVisibility(View.VISIBLE);
+            	holder.icon.setImageBitmap(  Bitmap.createScaledBitmap(bmp, bmp.getWidth()*2, bmp.getHeight()*2, false) );
+            } else {
+            	holder.icon.setVisibility(View.GONE);
+            }
 
             return convertView;
         }
@@ -131,6 +134,8 @@ public class WidgetPicker extends ListActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        setTitle(getResources().getString(R.string.widget_picker_title));
             
         Map<String,WidgetData> widgetMap = WidgetManager.refreshWidgets(this, null);
         widgetList = new ArrayList<WidgetData>();
@@ -138,9 +143,7 @@ public class WidgetPicker extends ListActivity {
         WidgetData dummy = new WidgetData();
         dummy.id = "";
         dummy.description = "<empty>";
-        dummy.bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565);
-        Canvas canvas = new Canvas(dummy.bitmap);
-        canvas.drawColor(Color.WHITE);	
+        dummy.bitmap = null;
         
         widgetList.add(dummy);
         

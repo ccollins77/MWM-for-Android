@@ -14,12 +14,11 @@ public class WeatherEngineFactory {
 	private static WeatherEngine createEngine() {
 		int engineId = Preferences.weatherProvider;
 		switch (engineId) {
-		case WeatherProvider.GOOGLE:
-			return new GoogleWeatherEngine();
 
 		case WeatherProvider.WUNDERGROUND:
 			return new WunderWeatherEngine();
 			
+		case WeatherProvider.GOOGLE_DEPRECATED:
 		case WeatherProvider.YAHOO:
 			return new YahooWeatherEngine();
 
