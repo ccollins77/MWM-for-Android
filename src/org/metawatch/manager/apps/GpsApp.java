@@ -64,9 +64,6 @@ public class GpsApp extends ApplicationBase implements LocationListener, Listene
 			
 			supportsDigital = true;
 			supportsAnalog = false;
-		
-			pageSettingKey = "GpsApp";
-			pageSettingAttribute = "gpsApp";
 		}};
 	}
 
